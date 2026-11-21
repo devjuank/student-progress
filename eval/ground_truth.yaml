@@ -1,0 +1,152 @@
+# Ground truth — written by hand, before building the reviewer.
+# severity: S1 | S2 | S3   (TEAM-STANDARDS §6)
+# rule: section of TEAM-STANDARDS: "1" quality, "2" testing, "3" PII/logging,
+#       "4" retention, "5" secrets
+# expected_decision: block (any S1/S2) | comment (only S3) | approve (no issues)
+# Match rule for eval: same file + same rule, line within ±3.
+
+- pr: feature/lessons-pagination
+  expected_decision:
+  issues:
+    - id: GT-01
+      severity: S3
+      rule: "2"
+      file: tests/test_lessons_pagination.py
+      line: 20
+      description: "test for limit when it's > 100"
+      ambiguous: false
+      notes: ""
+
+- pr: feature/score-validation
+  expected_decision: block
+  issues:
+    - id: GT-02
+      severity: S2
+      rule: "1"
+      file: app/main.py
+      line: 52
+      description: "Score is coerced with int() without type validation: non-numeric values raise an unhandled ValueError (500) and floats are silently truncated (e.g. 85.9 -> 85), storing incorrect data. These cases are not covered by tests."
+      ambiguous: true
+      notes: "Rule 1 (validate all external input) and rule 2 (edge cases untested). S2 because truncation stores incorrect data; could be argued as S3 robustness. Idiomatic fix: Pydantic model with score: int = Field(ge=0, le=100)."
+
+- pr: fix/mobile-sync-visibility
+  expected_decision: block
+  issues:
+    - id: GT-03
+      severity: S1
+      rule: "3"
+      file: app/main.py
+      line: 57
+      description: "New log line writes student.full_name and student.email in plain text on every progress record, including minors (pii-minor), without redact()."
+      ambiguous: false
+      notes: "Direct PII in logs. Aggravated: record_progress runs for minors too. The existing redacted log line right below already provides traceability (student_id + lesson_id), so the new line adds PII without need. Fix: log student_id only, or use redact()."
+
+- pr: feature/support-context
+  expected_decision: block
+  issues:
+    - id: GT-04
+      severity: S1
+      rule: "3"
+      file: app/main.py
+      line: 37
+      also_at: ["app/support.py:6", "app/support.py:7"]
+      description: "Every progress lookup logs the output of build_support_context(), which contains full_name, email and birthdate (indirect PII leak through a helper), including minors' data (pii-minor)."
+      ambiguous: false
+      notes: "Indirect leak: the log call in main.py looks harmless; the PII is built in app/support.py. birthdate also reveals age. redact() would not fix it: name and email are concatenated under the key 'student', which redact() does not recognize (only birthdate would be masked). Minors' data is also sent to support tooling without minimization (rule 3). Fix: log student_id and record count only."
+
+- pr: feature/email-reminders
+  expected_decision: block
+  issues:
+    - id: GT-05
+      severity: S1
+      rule: "5"
+      file: app/notifications.py
+      line: 7
+      description: "SendGrid API key is hardcoded and committed to the repository."
+      ambiguous: false
+      notes: "Committed secret = security incident regardless of environment, even though the PR says it is scaffolding and nothing is sent yet. The key must be rotated, not just removed (it stays in git history). Fix: read it from an environment variable."
+
+    - id: GT-06
+      severity: S1
+      rule: "3"
+      file: app/notifications.py
+      line: 13
+      description: "Logs the recipient's email address in plain text on every queued reminder."
+      ambiguous: false
+      notes: "Direct PII in logs. Reminders target students, which can include minors (pii-minor). Fix: log student_id instead of the email."
+
+    - id: GT-07
+      severity: S3
+      rule: "1"
+      file: app/notifications.py
+      line: 6
+      description: "TODO without a ticket reference ('mover a config antes del launch')."
+      ambiguous: false
+      notes: "Rule 1 forbids TODOs without a ticket. Minor on its own, but this TODO is postponing the secret fix (GT-05)."
+
+- pr: feature/streaks
+  expected_decision: block
+  issues:
+    - id: GT-08
+      severity: S2
+      rule: "2"
+      file: app/streaks.py
+      line: 10
+      description: "Off-by-one: the loop starts at yesterday (today - 1 day), so today's activity is never counted. A student active today and yesterday gets a streak of 1 instead of 2; active only today gets 0. Contradicts the docstring ('ending today')."
+      ambiguous: false
+      notes: "Logic bug that produces incorrect data (S2). Some products count streaks up to yesterday on purpose, but the docstring explicitly says 'terminando hoy'. Fix: start from today."
+
+    - id: GT-09
+      severity: S2
+      rule: "2"
+      file: tests/test_streaks.py
+      line: 6
+      also_at: ["tests/test_streaks.py:10", "tests/test_streaks.py:14"]
+      description: "Tests only assert trivial properties (returns int, >= 0) and cannot detect a regression: a function that always returned 0 would pass all three. The business case (consecutive days, gaps, today) is not tested."
+      ambiguous: false
+      notes: "Rule 2: trivial assertions do not count as coverage. Core logic without effective tests = S2. These tests are why GT-08 went unnoticed."
+
+- pr: feature/analytics-archive
+  expected_decision: block
+  issues:
+    - id: GT-10
+      severity: S1
+      rule: "4"
+      file: app/archive.py
+      line: 12
+      also_at: ["app/archive.py:5", "app/main.py:58"]
+      description: "New secondary copy of personal data (ARCHIVE) is kept indefinitely and has no retention category in app.privacy.RETENTION_DAYS, including minors' data (max 90 days)."
+      ambiguous: false
+      notes: "The docstring states 'se conserva indefinidamente'. Rule 4: every copied dataset declares retention; minors max 90 days; secondary copies without purpose and retention are not permitted. PR does not touch privacy.py."
+
+    - id: GT-11
+      severity: S1
+      rule: "3"
+      file: app/archive.py
+      line: 15
+      also_at: ["app/archive.py:16"]
+      description: "Copies full_name and birthdate for cohort analytics without data minimization; minors' data is made available to analytics without minimization or a documented legal basis."
+      ambiguous: false
+      notes: "Cohort analytics only needs student_id, country, is_minor (or an age range), lesson_id and score. Rule 3: minors' data must not go to analytics without minimization and a legal basis. Fix: drop full_name and exact birthdate."
+
+- pr: fix/progress-percentage
+  expected_decision: block
+  issues:
+    - id: GT-12
+      severity: S2
+      rule: "2"
+      file: app/main.py
+      line: 38
+      also_at: ["tests/test_progress.py:25"]
+      description: "The core change (round() -> int(), i.e. rounding -> truncation) is not covered by any test: the existing case (3/5 = 60%) gives the same result with both, so reverting the fix would not fail any test."
+      ambiguous: false
+      notes: "Only the no-lessons edge case was added. A case with decimals (e.g. 2/3 -> 66 vs 67) is needed to pin the new behavior."
+
+    - id: GT-13
+      severity: S2
+      rule: "2"
+      file: app/main.py
+      line: 38
+      description: "When there are no lessons, percentage changes from 0 to 100: a student is reported as 100% complete with nothing to complete. The new test locks in this behavior."
+      ambiguous: true
+      notes: "Arguably incorrect data (S2). Could be intentional to match the app, but the PR gives no reason and the test also passes with completed (3) > total (0), an inconsistent state. Could be argued as a product decision."
