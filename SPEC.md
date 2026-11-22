@@ -24,6 +24,12 @@ Same code path in CI, locally (`--dry-run`) and in the eval harness.
 | `suggested_fix` | string                            | Concrete, minimal change                           |
 | `source`        | `deterministic` \| `llm`          |                                                    |
 | `confidence`    | float 0–1, optional               | LLM only; deterministic findings are implicitly 1.0 |
+| `candidate`     | bool, default `false`             | Deterministic hint the LLM must confirm or discard (§3) |
+
+**Line anchoring.** `line` points where a reviewer would mark the issue: the first added line of
+real code, preferring lines inside a function. Imports, docstrings, comments and blank lines are
+skipped. Reason: the eval matches findings by line (±5, §7); anchoring to a module docstring or an
+import would count the same issue as a false positive and a false negative.
 
 Invalid LLM output (fails schema validation) is retried; retries are counted in telemetry.
 Findings pointing to files outside the PR's context are dropped.
@@ -36,14 +42,18 @@ Findings pointing to files outside the PR's context are dropped.
 | `ruff check` fails                                           | deterministic | S3       |
 | `pytest` fails                                               | deterministic | S2       |
 | Logic change in `app/` without changes in `tests/` (§2)      | deterministic | S2 candidate (confirmed by LLM) |
-| PII attribute (`.full_name`, `.email`, `.birthdate`) passed directly as a log argument, not wrapped in `redact()` (§3) | deterministic | S1 |
-| PII field names elsewhere in a log call (inside `redact()`, `extra`, helper calls) (§3) | deterministic | S1 candidate (confirmed by LLM) |
+| PII attribute (`.full_name`, `.email`, `.birthdate`) or a variable with a PII field name passed to a log call, including `extra` and f-strings, not wrapped in `redact()` (§3) | deterministic | S1 |
+| PII that may bypass `redact()` in a log call: a PII value under a non-PII key inside `redact()`, the whole PII-bearing object, a method on it, or a helper receiving it (§3) | deterministic | S1 candidate (confirmed by LLM) |
 | New persisted/copied dataset without a `RETENTION_DAYS` entry (§4) | deterministic (heuristic) | S1 candidate |
 | Indirect PII leaks: helpers, `extra`, object serialization (§3) | LLM        | S1       |
 | Minors' data leaving the service without minimization / legal basis (§3, §4) | LLM | S1 |
 | Ineffective tests: trivial asserts, mocked logic, no business case (§2) | LLM | S2 |
 | Logic bugs that produce incorrect data (§6)                  | LLM           | S2       |
 | Style, naming, refactoring (§1)                              | LLM           | S3       |
+
+The PII checks only inspect log calls added or modified by the PR. PII field names come from
+`app.privacy.PII_FIELDS`, and PII-bearing objects from the classes in `app/models.py` that have
+those fields. `redact({"email": x.email})` (exact PII key) is correct usage and produces no finding.
 
 "Candidate" findings are passed to the LLM as hints; the LLM confirms or discards them.
 A confirmed candidate has `source = llm` (the model made the final call) and goes through the
