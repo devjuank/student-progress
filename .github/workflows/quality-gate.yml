@@ -1,0 +1,144 @@
+# AI Quality Gate: reviews each PR against TEAM-STANDARDS.md (see SPEC.md, DECISIONS.md ADR-005).
+#
+# Two jobs so the API key never shares a runner with the PR's code:
+#   tools  — runs ruff + pytest on the PR's code. No secrets, read-only token.
+#   review — static checks + LLM review with the API key. Runs the reviewer from the base branch and
+#            only reads the PR's files through git; it never executes them.
+name: quality-gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number to review
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+env:
+  PR: ${{ github.event.pull_request.number || inputs.pr }}
+
+jobs:
+  tools:
+    name: ruff + pytest (PR code, no secrets)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      head: ${{ steps.pr.outputs.head }}
+      base: ${{ steps.pr.outputs.base }}
+    steps:
+      - name: Resolve PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid,baseRefName \
+            --jq '"head=\(.headRefOid)\nbase=\(.baseRefName)"' >> "$GITHUB_OUTPUT"
+      - name: Checkout reviewer (base branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.base }}
+          path: gate
+          persist-credentials: false
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r gate/requirements.txt -r pr/requirements.txt
+      - name: Run ruff + pytest
+        working-directory: gate
+        env:
+          HEAD_SHA: ${{ steps.pr.outputs.head }}
+          BASE_REF: ${{ steps.pr.outputs.base }}
+        run: |
+          python -m reviewer --repo ../pr --base "origin/$BASE_REF" --head "$HEAD_SHA" \
+            --workdir ../pr --tools-only --tools-out ../tools.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tools
+          path: tools.json
+
+  review:
+    name: AI review
+    needs: tools
+    if: ${{ !cancelled() && needs.tools.outputs.head != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout reviewer (base branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tools.outputs.base }}
+          path: gate
+          persist-credentials: false
+      - name: Fetch PR (read through git only, never executed)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tools.outputs.head }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r gate/requirements.txt
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: tools
+      - name: Prepare inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f tools.json ]; then
+            echo '[{"severity": "S2", "rule": "2", "file": "tests", "line": 1, "source": "deterministic",
+              "explanation": "The ruff/pytest job did not produce results.",
+              "suggested_fix": "Check the tools job logs.", "confidence": null, "candidate": false}]' > tools.json
+          fi
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json body --jq .body > description.txt
+      - name: Review
+        id: review
+        working-directory: gate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEWER_MODEL: ${{ vars.REVIEWER_MODEL || 'anthropic/claude-opus-5-5' }}
+          HEAD_SHA: ${{ needs.tools.outputs.head }}
+          BASE_REF: ${{ needs.tools.outputs.base }}
+        run: |
+          set +e
+          python -m reviewer --repo ../pr --base "origin/$BASE_REF" --head "$HEAD_SHA" \
+            --tools-in ../tools.json --description-file ../description.txt --report ../report.md > ../result.json
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+      - name: Job summary
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment on PR
+        continue-on-error: true  # fork PRs get a read-only token
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file report.md --edit-last --create-if-none
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telemetry
+          path: gate/telemetry.jsonl
+      - name: Gate status
+        env:
+          EXIT: ${{ steps.review.outputs.exit }}
+        run: |
+          if [ "$EXIT" != "0" ]; then echo "::error title=AI Quality Gate::Blocked; see the PR comment."; fi
+          exit "$EXIT"

@@ -88,7 +88,7 @@ code; eval matching tolerates a human and a model choosing different lines for t
 |------------------------------------------------------------------|----------|
 | Any deterministic S1 or S2 (not a candidate)                     | **block** |
 | Any LLM S1 with `confidence ≥ 0.8`                               | **block** |
-| Any other LLM S1/S2                                              | **review** (comment + request human review; check status red/pending) |
+| Any other LLM S1/S2                                              | **review** (comment + request human review; check passes with a warning) |
 | Only S3 findings                                                 | **comment** |
 | No findings                                                      | **approve** |
 

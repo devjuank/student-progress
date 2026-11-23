@@ -58,3 +58,30 @@ ties the code to one provider, against ADR-002); an older model that still accep
 
 **Consequences.** Some variance between runs is expected and must show up in the eval. The model's
 default effort applies; tuning it is a candidate improvement if the eval shows the need.
+
+## ADR-005 — CI security: the API key never shares a runner with the PR's code
+
+**Context.** The gate runs `pytest`, which executes the PR's code. Any code in the PR (a test, a
+`conftest.py`, a dependency in `requirements.txt`) could read environment variables and exfiltrate the
+API key. A PR could also edit `TEAM-STANDARDS.md`, `PII_FIELDS` or the reviewer itself to weaken the
+review it gets.
+
+**Decision.** Two jobs on `pull_request` (never `pull_request_target`):
+- `tools`: checks out the PR and runs ruff + pytest. No secrets, read-only token, no persisted
+  credentials. Only its ruff/pytest results are passed on (as an artifact).
+- `review`: has the API key. Runs the reviewer code from the **base** branch, reads the PR's files
+  only through git, and never executes them. Standards are read from the base; PII fields are the
+  union of base and head, so a PR cannot remove a field to hide a leak.
+
+`block` fails the check (red). `review` passes with a warning and a comment asking for a human, so the
+trust policy (ADR-003) has an effect in CI.
+
+**Alternatives.** One job (simpler, but the PR's code runs next to the key); `pull_request_target`
+(secrets also on fork PRs, but it is the classic way to leak them when combined with checking out the
+PR); no tests in the gate (safe, but loses the deterministic §2 signal).
+
+**Consequences.** The `tools` artifact comes from untrusted code: a PR could fake its own ruff/pytest
+results, which it could already do by editing its tests; static checks and the LLM review are
+recomputed in the trusted job. PRs from forks get no secrets on `pull_request`: the LLM review fails
+and the gate asks for human review instead of approving. The reviewer must be on the base branch
+before it can review PRs against it.

@@ -188,7 +188,8 @@ def review(
     completion: Callable = _default_completion,
 ) -> LLMResult:
     model = os.environ.get("REVIEWER_MODEL", DEFAULT_MODEL)
-    standards = Path(repo, STANDARDS_FILE).read_text()
+    # Standards come from the base: a PR must not be able to rewrite the rules it is judged by.
+    standards = ctx.base(STANDARDS_FILE) or Path(repo, STANDARDS_FILE).read_text()
     messages, known_files, truncated = build_messages(ctx, diff_text, standards, candidates, pr_description)
     result = LLMResult(findings=[], model=model, truncated_context=truncated, candidates_sent=len(candidates))
     start = time.monotonic()

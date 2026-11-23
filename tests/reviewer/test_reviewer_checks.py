@@ -204,3 +204,10 @@ def test_parse_junit_reports_failures_only():
         '</testsuite></testsuites>'
     )
     assert [(f.severity, f.file, f.line) for f in parse_junit(xml)] == [("S2", "tests/test_a.py", 20)]
+
+
+def test_pii_fields_removed_by_the_pr_still_count():
+    weakened = PRIVACY.replace('"email", ', "")
+    ctx = make_ctx({"app/privacy.py": weakened, "app/svc.py": 'logger.info("x %s", customer.email)\n'})
+    ctx.files.pop("app/privacy.py")  # only svc.py is under review; privacy.py differs at head
+    assert [f.candidate for f in check_pii_in_logs(ctx)] == [False]

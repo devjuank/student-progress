@@ -201,8 +201,13 @@ def _classify_log_arg(node: ast.AST, pii_fields: set[str], pii_objects: set[str]
 
 
 def check_pii_in_logs(ctx: PRContext) -> list[Finding]:
-    pii_fields = _string_set_literal(_parse(ctx.head(PRIVACY_MODULE)), "PII_FIELDS") or DEFAULT_PII_FIELDS
-    pii_objects = _pii_object_names(_parse(ctx.head(MODELS_MODULE)), pii_fields)
+    # Union of base and head: a PR can add PII fields, but removing one does not hide it.
+    pii_fields = DEFAULT_PII_FIELDS.union(*(
+        _string_set_literal(_parse(read(PRIVACY_MODULE)), "PII_FIELDS") or set() for read in (ctx.base, ctx.head)
+    ))
+    pii_objects = set().union(*(
+        _pii_object_names(_parse(read(MODELS_MODULE)), pii_fields) for read in (ctx.base, ctx.head)
+    ))
     findings = []
     for change in ctx.files.values():
         if not (_is_python_source(change.path) and change.added):

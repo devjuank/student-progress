@@ -155,3 +155,47 @@ def test_standards_decision_ignores_trust_policy():
     assert standards_decision([llm_f(severity="S2", confidence=0.1)]) == "block"
     assert standards_decision([llm_f(severity="S3")]) == "comment"
     assert standards_decision([]) == "approve"
+
+
+# --- report ---
+
+
+def test_report_renders_decision_findings_and_metadata_without_breaking_table():
+    from reviewer.report import MARKER, render
+
+    result = {
+        "decision": "block", "standards_decision": "block", "llm_error": None,
+        "findings": [{"severity": "S1", "rule": "3", "file": "app/a.py", "line": 4, "source": "llm",
+                      "confidence": 0.9, "candidate": False, "explanation": "leaks | data\nhere",
+                      "suggested_fix": "redact"}],
+        "llm": {"model": "m", "prompt_version": "abc", "cost_usd": 0.0123, "latency_s": 3.21},
+    }
+    text = render(result)
+    assert text.startswith(MARKER) and "Blocked" in text
+    assert "| S1 | §3 | `app/a.py:4` | llm (0.90) | leaks \\| data here | redact |" in text
+    assert "$0.0123" in text and "`abc`" in text
+
+
+def test_report_flags_llm_failure_without_error_payload():
+    from reviewer.report import render
+
+    text = render({"decision": "review", "standards_decision": "approve", "findings": [], "llm": None,
+                   "llm_error": "AuthenticationError: secret details"})
+    assert "AuthenticationError" in text and "secret details" not in text
+
+
+# --- PR cannot weaken the rules it is judged by ---
+
+
+def test_standards_are_read_from_base(tmp_path):
+    (tmp_path / "TEAM-STANDARDS.md").write_text("from disk")
+    seen = []
+    sources = {"base": {"TEAM-STANDARDS.md": "BASE RULES"}, "head": {"TEAM-STANDARDS.md": "anything goes"}}
+    ctx = PRContext(make_ctx().files, lambda ref, path: sources[ref].get(path, SOURCES.get(path)), "base", "head")
+
+    def completion(**kwargs):
+        seen.append(kwargs["messages"][1]["content"])
+        return fake_response('{"findings": []}')
+
+    llm.review(ctx, "diff", [], repo=str(tmp_path), completion=completion)
+    assert "BASE RULES" in seen[0] and "anything goes" not in seen[0]
