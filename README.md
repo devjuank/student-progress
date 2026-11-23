@@ -78,6 +78,10 @@ gh secret set ANTHROPIC_API_KEY             # paste the key when prompted
 gh variable set REVIEWER_MODEL --body anthropic/claude-opus-5-5   # optional
 ```
 
+**Live demo:** PR #9 (`rehearsal/leaderboard`, a PR the reviewer was never tuned on) shows the gate
+on a real `pull_request` event: the `AI review` check is red and the comment lists the findings
+(EVAL.md §6). PRs #1–#8 are the golden set; their gate comments come from manual reruns.
+
 The reviewer must be on the base branch (`main`) to review PRs against it. To re-run the gate on an
 existing PR: `gh workflow run quality-gate -f pr=<number>`.
 
