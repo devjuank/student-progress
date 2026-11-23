@@ -1,9 +1,11 @@
 # Ground truth — written by hand, before building the reviewer.
 # severity: S1 | S2 | S3   (TEAM-STANDARDS §6)
-# rule: section of TEAM-STANDARDS: "1" quality, "2" testing, "3" PII/logging,
-#       "4" retention, "5" secrets
+# rule: section of TEAM-STANDARDS: "1" input validation / code quality, "2" testing,
+#       "3" PII/logging/minimization, "4" retention, "5" secrets,
+#       "6" logic bugs that produce incorrect data
 # expected_decision: block (any S1/S2) | comment (only S3) | approve (no issues)
-# Match rule for eval: same file + same rule, line within ±3.
+#   Based on non-ambiguous issues only.
+# Match rule for eval: same rule + file:line within ±5 (or any also_at location). See SPEC §7.
 
 - pr: feature/lessons-pagination
   expected_decision: approve
