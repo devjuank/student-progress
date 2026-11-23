@@ -1,0 +1,28 @@
+# Rehearsal PR (step 9) — written by Claude Code, NOT part of the human ground truth.
+# Committed before the reviewer ran on it. Same format as eval/ground_truth.yaml.
+# Issue types deliberately absent from the golden set: PII exposed in an HTTP response
+# (not a log or copy) and silent exception handling.
+- pr: rehearsal/leaderboard
+  expected_decision: block
+  issues:
+    - id: R-01
+      severity: S1
+      rule: "3"
+      file: app/main.py
+      line: 74
+      description: >
+        Public leaderboard returns students' full names, minors included. Minors' data leaves the
+        service to other users without minimization; an id, initials or opt-in alias would do.
+      ambiguous: false
+      also_at: []
+    - id: R-02
+      severity: S2
+      rule: "1"
+      file: app/main.py
+      line: 71
+      description: >
+        `except Exception: continue` silently skips a student on any error, not just "no scores";
+        TEAM-STANDARDS §1 forbids silent exception handling.
+      ambiguous: true
+      notes: Severity could be argued as S3; it hides errors rather than producing wrong data today.
+      also_at: []
