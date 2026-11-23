@@ -17,7 +17,7 @@ Same code path in CI, locally (`--dry-run`) and in the eval harness.
 | Field           | Type                              | Notes                                              |
 |-----------------|-----------------------------------|----------------------------------------------------|
 | `severity`      | `S1` \| `S2` \| `S3`              | As defined in TEAM-STANDARDS §6                    |
-| `rule`          | string, section number, e.g. `"3"` | Section of TEAM-STANDARDS that is violated        |
+| `rule`          | `"1"`–`"6"`                       | Category, by TEAM-STANDARDS section: 1 input validation / code quality, 2 missing or ineffective tests, 3 PII / logging / minimization, 4 retention, 5 secrets, 6 logic bugs producing incorrect data |
 | `file`          | repo-relative path                | Must be a file touched by the PR (or a helper it calls) |
 | `line`          | int                               | Line in the head version of `file`                 |
 | `explanation`   | string                            | Why it violates the rule; no PII values quoted     |

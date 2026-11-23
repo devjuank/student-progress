@@ -37,8 +37,12 @@ How to review:
 - For tests, ask whether they would fail if the behavior broke (TEAM-STANDARDS §2).
 - For logic, check edge cases and boundary conditions against what the PR description and the code
   intend.
-- Severity follows TEAM-STANDARDS §6. `rule` is the number of the TEAM-STANDARDS section whose rule
-  is violated ("1".."5"; use "6" only if no other section applies).
+- Severity follows TEAM-STANDARDS §6. `rule` classifies the violation:
+  "1" unvalidated input / code quality, "2" missing or ineffective tests,
+  "3" PII / logging / minimization, "4" retention, "5" secrets,
+  "6" logic bugs that produce incorrect data.
+  When a logic bug also lacks tests that would catch it, report the bug ("6") and the tests ("2")
+  as separate findings.
 - `line` is the line in the head version of the file where a reviewer would mark the issue (the
   offending statement, not the module docstring or an import).
 - Never quote PII values or secret values in explanations.
