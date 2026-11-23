@@ -11,7 +11,20 @@ and `eval/runs/<timestamp>.json` (every finding and its match).
 1 `approve`). Issues the author considered debatable are marked `ambiguous: true`; issues that occur
 in more than one place list the extra locations in `also_at`.
 
-> ✍️ **Author:** add a short per-PR summary here (problem, severity, rule), in your own words.
+Per-PR summary (author's view):
+
+| PR | Expected | Main problem | Severity / rule |
+|----|----------|--------------|-----------------|
+| `feature/lessons-pagination` | approve | Clean. Only a minor test gap (limit > 100 not tested), marked ambiguous. This is the control PR. | S3 / §2 (ambiguous) |
+| `feature/score-validation` | block | `score` is converted with `int()` without validation: bad input returns 500 and decimals are truncated, storing wrong data. | S2 / §1 (ambiguous: could be S3) |
+| `fix/mobile-sync-visibility` | block | New log line writes the student's name and email in plain text, minors included. | S1 / §3 |
+| `feature/support-context` | block | Indirect PII leak: the log looks harmless, but the helper builds name, email and birthdate. `redact()` would not fix it. | S1 / §3 |
+| `feature/email-reminders` | block | Committed SendGrid API key; logs the recipient's email; TODO without a ticket. | S1 / §5, S1 / §3, S3 / §1 |
+| `feature/streaks` | block | Off-by-one: today's activity is never counted. Tests are trivial and would pass even if the function always returned 0. | S2 / §6, S2 / §2 |
+| `feature/analytics-archive` | block | Copies personal data (including minors') for analytics, kept forever with no retention category, and without minimization (full name and birthdate are not needed). | S1 / §4, S1 / §3 |
+| `fix/progress-percentage` | block | The main change (rounding → truncation) has no test that would catch a regression. Also, with no lessons it now reports 100% (ambiguous: could be a product decision). | S2 / §2, S2 / §6 (ambiguous) |
+
+Most of the golden set is about minors' privacy (4 of 8 PRs have S1 issues), which is where the reviewer must be strongest.
 
 ## 2. Results
 
@@ -50,7 +63,11 @@ Total eval spend so far: about $2.30 for 8 LLM runs of the golden set.
   `comment` and the PR was let through.
 - **Why:** finding-level recall hid it (the finding matched, so it counted as a TP); the failure is
   in *classification*, and only decision-level metrics show it. The prompt left the S2/S3 boundary
-  to the model.
+  to the model. GT-02 is itself marked ambiguous (S2 or S3), so the S3 rating is one of the two
+  readings the author considered, and it is not a false negative in the strict view. The real
+  failure is at decision level: `expected_decision` is `block`, so the PR should not get through
+  either way. When the only issue of a PR is ambiguous in severity, its expected decision deserves
+  the same flag.
 - **What we changed:** iteration 1 added "a violation of an explicit rule is at least S2". It fixed
   this PR (review 3/3) but pushed a minor test gap in `feature/lessons-pagination` to S2, so the gate
   asked for review on a PR that should be approved (2/3). Fixing one case broke another: a sign of
@@ -58,7 +75,8 @@ Total eval spend so far: about $2.30 for 8 LLM runs of the golden set.
   golden set, and was measured once (see §5).
 - **Related:** in the final run the same finding was reported as rule §6 (truncating 99.9 to 99
   stores incorrect data) while the ground truth has it as §1 (unvalidated input). Detection and
-  severity were right; the eval's exact `rule` match counted it as FP + FN. The issue genuinely fits
+  severity were right; the eval's exact `rule` match counted it as a false positive in the strict
+  view, and also as a false negative in the inclusive view (GT-02 is ambiguous). The issue genuinely fits
   both categories. **Next change:** let a ground-truth issue accept more than one rule.
 
 ### False positive — logs treated as a dataset without retention
@@ -69,11 +87,22 @@ Total eval spend so far: about $2.30 for 8 LLM runs of the golden set.
   `feature/support-context` and in `feature/analytics-archive`.
 - **Why:** they are consistent readings of TEAM-STANDARDS, not noise: §4 forbids "secondary copies
   of personal data without a defined purpose and retention period", and §2 asks for tests on every
-  logic change. The ground truth reports only the main §3 issue in these PRs.
-- **What to change:**
-  > ✍️ **Author:** decide per finding: (a) the reviewer over-reports → clarify the standard (for
-  > example "logs are governed by §3; §4 applies to stored datasets"), which fixes it for every PR;
-  > or (b) the issue is real → add it to the ground truth. Do not patch the prompt for this case.
+  logic change. The ground truth reports only the privacy and retention issues in these PRs.
+- **What to change:** the ground truth is **left unchanged** on purpose. Editing it after seeing the
+  reviewer's output would tune the answer key to the model and inflate the metrics.
+  - **§4 on logs (support-context): the reviewer over-reports.** A log is not a stored dataset; the
+    real problem is PII in the log (§3), already captured by GT-04. Reporting it as §4 counts the same
+    root cause twice. The right fix is in the standard, not in the prompt: TEAM-STANDARDS should state
+    that logs are governed by §3 and §4 applies to persisted or copied datasets. Recommended, not
+    applied.
+  - **"New helper has no tests" (support-context, analytics-archive): debatable.** By the letter of
+    §2 the reviewer has a point, but next to an S1 privacy issue in the same PR it is minor, and I did
+    not consider it a real problem when I wrote the ground truth. They stay as false positives.
+    In the final run only one of them appears (`feature/analytics-archive`); counted as ambiguous
+    instead, precision would rise from 0.714 to 0.769 — the reported number is the conservative one.
+  - **Not patched in the prompt.** All three are consistent readings of the standard, not noise, so
+    a prompt patch would only hide them on these PRs. The production signal is the override rate:
+    if humans keep dismissing these findings, that is the cue to clarify the standard.
 
 ## 4. Trust policy, justified
 
@@ -94,7 +123,7 @@ as precise when it matches a ground-truth issue, ambiguous ones included):
   measured to work, on a small set.
 - LLM S2 is right about 6 times out of 10, which is too low to block a merge automatically. It asks
   for a human instead. This is why 3 PRs end in `review` rather than `block`, and why the gate still
-  stops 8/8 PRs that should be stopped.
+  stops all 7 PRs that should be stopped and lets the control PR through.
 - Review is cheap and wrong blocks erode trust in the gate, so the policy prefers `review` when
   unsure. Override rate in production (humans merging a `review`/`block`) is the live signal to
   revisit these thresholds.
