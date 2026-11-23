@@ -1,0 +1,566 @@
+{
+ "runs": 1,
+ "precision": {
+  "mean": 0.455,
+  "min": 0.455,
+  "max": 0.455
+ },
+ "recall": {
+  "mean": 0.5,
+  "min": 0.5,
+  "max": 0.5
+ },
+ "gate_decision_accuracy": {
+  "mean": 0.625,
+  "min": 0.625,
+  "max": 0.625
+ },
+ "standards_decision_accuracy": {
+  "mean": 0.625,
+  "min": 0.625,
+  "max": 0.625
+ },
+ "cost_usd_per_pr": {
+  "mean": null
+ },
+ "latency_s_per_pr": {
+  "mean": null
+ },
+ "llm_errors": 0,
+ "decision_stability": {
+  "feature/lessons-pagination": {
+   "approve": 1
+  },
+  "feature/score-validation": {
+   "approve": 1
+  },
+  "fix/mobile-sync-visibility": {
+   "block": 1
+  },
+  "feature/support-context": {
+   "review": 1
+  },
+  "feature/email-reminders": {
+   "block": 1
+  },
+  "feature/streaks": {
+   "approve": 1
+  },
+  "feature/analytics-archive": {
+   "review": 1
+  },
+  "fix/progress-percentage": {
+   "approve": 1
+  }
+ },
+ "per_run": [
+  {
+   "results": {
+    "feature/lessons-pagination": {
+     "head": "feature/lessons-pagination",
+     "decision": "approve",
+     "standards_decision": "approve",
+     "findings": [],
+     "llm": null,
+     "llm_error": null
+    },
+    "feature/score-validation": {
+     "head": "feature/score-validation",
+     "decision": "approve",
+     "standards_decision": "approve",
+     "findings": [],
+     "llm": null,
+     "llm_error": null
+    },
+    "fix/mobile-sync-visibility": {
+     "head": "fix/mobile-sync-visibility",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/main.py",
+       "line": 57,
+       "explanation": "A PII field is passed to a log call without redaction.",
+       "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/main.py",
+       "line": 57,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      }
+     ],
+     "llm": null,
+     "llm_error": null
+    },
+    "feature/support-context": {
+     "head": "feature/support-context",
+     "decision": "review",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/main.py",
+       "line": 37,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/support.py",
+       "line": 4,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      },
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/main.py",
+       "line": 37,
+       "explanation": "A log call receives an object or value that may carry PII past redact() (object serialization, helper output or a PII value under a non-PII key).",
+       "suggested_fix": "Log only non-personal identifiers, or pass an explicit dict through app.privacy.redact().",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      }
+     ],
+     "llm": null,
+     "llm_error": null
+    },
+    "feature/email-reminders": {
+     "head": "feature/email-reminders",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "5",
+       "file": "app/notifications.py",
+       "line": 7,
+       "explanation": "A hardcoded credential is committed in this line. A committed secret is a security incident regardless of environment.",
+       "suggested_fix": "Read it from an environment variable, remove it from history and rotate the credential.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      },
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/notifications.py",
+       "line": 13,
+       "explanation": "A PII field is passed to a log call without redaction.",
+       "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/notifications.py",
+       "line": 11,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      }
+     ],
+     "llm": null,
+     "llm_error": null
+    },
+    "feature/streaks": {
+     "head": "feature/streaks",
+     "decision": "approve",
+     "standards_decision": "approve",
+     "findings": [],
+     "llm": null,
+     "llm_error": null
+    },
+    "feature/analytics-archive": {
+     "head": "feature/analytics-archive",
+     "decision": "review",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/archive.py",
+       "line": 11,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/main.py",
+       "line": 58,
+       "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+       "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      },
+      {
+       "severity": "S1",
+       "rule": "4",
+       "file": "app/archive.py",
+       "line": 8,
+       "explanation": "New module-level dataset without a retention category in app.privacy.RETENTION_DAYS.",
+       "suggested_fix": "Declare its retention category in RETENTION_DAYS (90 days max for minors' data) and store only the fields the purpose needs.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": true
+      }
+     ],
+     "llm": null,
+     "llm_error": null
+    },
+    "fix/progress-percentage": {
+     "head": "fix/progress-percentage",
+     "decision": "approve",
+     "standards_decision": "approve",
+     "findings": [],
+     "llm": null,
+     "llm_error": null
+    }
+   },
+   "scored": {
+    "feature/lessons-pagination": {
+     "outcomes": [],
+     "matched": [],
+     "missed": [
+      "GT-01"
+     ]
+    },
+    "feature/score-validation": {
+     "outcomes": [],
+     "matched": [],
+     "missed": [
+      "GT-02"
+     ]
+    },
+    "fix/mobile-sync-visibility": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/main.py",
+        "line": 57,
+        "explanation": "A PII field is passed to a log call without redaction.",
+        "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-03",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/main.py",
+        "line": 57,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      }
+     ],
+     "matched": [
+      "GT-03"
+     ],
+     "missed": []
+    },
+    "feature/support-context": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/main.py",
+        "line": 37,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/support.py",
+        "line": 4,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/main.py",
+        "line": 37,
+        "explanation": "A log call receives an object or value that may carry PII past redact() (object serialization, helper output or a PII value under a non-PII key).",
+        "suggested_fix": "Log only non-personal identifiers, or pass an explicit dict through app.privacy.redact().",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": "GT-04",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-04"
+     ],
+     "missed": []
+    },
+    "feature/email-reminders": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "5",
+        "file": "app/notifications.py",
+        "line": 7,
+        "explanation": "A hardcoded credential is committed in this line. A committed secret is a security incident regardless of environment.",
+        "suggested_fix": "Read it from an environment variable, remove it from history and rotate the credential.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-05",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/notifications.py",
+        "line": 13,
+        "explanation": "A PII field is passed to a log call without redaction.",
+        "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-06",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/notifications.py",
+        "line": 11,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      }
+     ],
+     "matched": [
+      "GT-05",
+      "GT-06"
+     ],
+     "missed": [
+      "GT-07"
+     ]
+    },
+    "feature/streaks": {
+     "outcomes": [],
+     "matched": [],
+     "missed": [
+      "GT-08",
+      "GT-09"
+     ]
+    },
+    "feature/analytics-archive": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/archive.py",
+        "line": 11,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/main.py",
+        "line": 58,
+        "explanation": "Code in app/ changes but the PR does not add or modify any test.",
+        "suggested_fix": "Add tests that fail if this behavior breaks, including edge cases.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": null
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "4",
+        "file": "app/archive.py",
+        "line": 8,
+        "explanation": "New module-level dataset without a retention category in app.privacy.RETENTION_DAYS.",
+        "suggested_fix": "Declare its retention category in RETENTION_DAYS (90 days max for minors' data) and store only the fields the purpose needs.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": true
+       },
+       "issue": "GT-10",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-10"
+     ],
+     "missed": [
+      "GT-11"
+     ]
+    },
+    "fix/progress-percentage": {
+     "outcomes": [],
+     "matched": [],
+     "missed": [
+      "GT-12",
+      "GT-13"
+     ]
+    }
+   },
+   "metrics": {
+    "strict": {
+     "tp": 5,
+     "fp": 6,
+     "fn": 5,
+     "precision": 0.455,
+     "recall": 0.5,
+     "severity_accuracy": 1.0,
+     "per_severity": {
+      "S1": {
+       "precision": 1.0,
+       "recall": 0.833,
+       "tp": 5,
+       "fn": 1
+      },
+      "S2": {
+       "precision": 0.0,
+       "recall": 0.0,
+       "fp": 6,
+       "fn": 3
+      },
+      "S3": {
+       "precision": null,
+       "recall": 0.0,
+       "fn": 1
+      }
+     },
+     "per_source": {
+      "deterministic": {
+       "precision": 0.455,
+       "tp": 5,
+       "fp": 6
+      },
+      "llm": {
+       "precision": null
+      }
+     }
+    },
+    "inclusive": {
+     "tp": 5,
+     "fp": 6,
+     "fn": 8,
+     "precision": 0.455,
+     "recall": 0.385,
+     "severity_accuracy": 1.0,
+     "per_severity": {
+      "S1": {
+       "precision": 1.0,
+       "recall": 0.833,
+       "tp": 5,
+       "fn": 1
+      },
+      "S2": {
+       "precision": 0.0,
+       "recall": 0.0,
+       "fn": 5,
+       "fp": 6
+      },
+      "S3": {
+       "precision": null,
+       "recall": 0.0,
+       "fn": 2
+      }
+     },
+     "per_source": {
+      "deterministic": {
+       "precision": 0.455,
+       "tp": 5,
+       "fp": 6
+      },
+      "llm": {
+       "precision": null
+      }
+     }
+    }
+   },
+   "decisions": {
+    "scored_prs": 8,
+    "missing_expected_decision": [],
+    "standards": 0.625,
+    "gate_stopped": 0.625
+   }
+  }
+ ]
+}

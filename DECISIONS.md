@@ -85,3 +85,36 @@ results, which it could already do by editing its tests; static checks and the L
 recomputed in the trusted job. PRs from forks get no secrets on `pull_request`: the LLM review fails
 and the gate asks for human review instead of approving. The reviewer must be on the base branch
 before it can review PRs against it.
+
+## ADR-006 — Prompt changes are justified by the standards, not by the golden-set score
+
+**Context.** The golden set is small (8 PRs, 13 issues) and is the only labeled data. In step 7, a
+severity heuristic fixed one false negative and introduced a new false positive; the natural next
+edit ("minor test gaps are S3") was written knowing how one ground-truth issue was labeled. Iterating
+like that tunes the prompt to these 8 PRs, while the review session tests a PR we have not seen.
+
+**Decision.** A prompt change is accepted only if it can be justified from the text of
+TEAM-STANDARDS and would apply the same way to any PR. It is never accepted because it improves the
+golden-set metric. The prompt contains no examples or hints drawn from the golden-set PRs. After the
+single step-7 iteration, the final severity wording restates §6 and was measured once.
+Generalization is measured on new PRs the reviewer was never tuned on.
+
+**Alternatives.** Keep iterating until the metrics are perfect (better numbers, worse reviewer on
+unseen PRs); split the 8 PRs into tuning and test sets (too small for either half to mean anything).
+
+**Consequences.** Known failures stay documented in `EVAL.md` instead of being patched. Fixes that
+come from ambiguity in the standards (for example, whether logs are a §4 dataset) belong in
+TEAM-STANDARDS, not in the prompt.
+
+## Left out, and why
+
+- **LiteLLM proxy, central keys and budgets** — the production path (ADR-002); one more service is
+  not worth it for a single repo.
+- **OpenTelemetry export (Langfuse/Datadog)** — telemetry is already structured metadata-only JSONL;
+  exporting it is a configuration step once a backend exists. In production: GenAI semantic
+  conventions and trends for cost/day, latency, error rate, block rate and override rate.
+- **Model comparison and more stability runs** — Plan B; the harness supports both
+  (`REVIEWER_MODEL`, `--runs N`).
+- **Line-level inline PR comments** — a single comment with a table is enough to act on and is
+  easy to keep idempotent.
+- **Deploying the service, UI, dashboards, fine-tuning** — out of scope for the challenge.

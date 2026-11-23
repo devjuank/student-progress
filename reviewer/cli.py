@@ -34,7 +34,7 @@ def head_checkout(head: str, repo: str):
 def run_tools(ctx: PRContext, head: str, repo: str, workdir: str | None) -> list[Finding]:
     if workdir:
         return run_ruff(ctx, workdir) + run_pytest(workdir)
-    with head_checkout(head, repo) as checkout:
+    with head_checkout(ctx.head_ref, repo) as checkout:
         return run_ruff(ctx, checkout) + run_pytest(checkout)
 
 
@@ -50,7 +50,7 @@ def run(base: str, head: str, repo: str = ".", use_llm: bool = True, workdir: st
     llm_result, llm_error = None, None
     if use_llm:
         diff_text = subprocess.run(
-            ["git", "diff", "--no-color", ctx.base_ref, head], cwd=repo, capture_output=True, text=True, check=True
+            ["git", "diff", "--no-color", ctx.base_ref, ctx.head_ref], cwd=repo, capture_output=True, text=True, check=True
         ).stdout
         candidates = [f for f in deterministic if f.candidate]
         try:

@@ -54,8 +54,19 @@ def _git(repo: str, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True).stdout
 
 
+def resolve_ref(ref: str, repo: str = ".") -> str:
+    """Returns ref if it exists, else origin/<ref> (fresh clones only have the default branch locally)."""
+    for candidate in (ref, f"origin/{ref}"):
+        check = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{candidate}^{{commit}}"],
+                               cwd=repo, capture_output=True)
+        if check.returncode == 0:
+            return candidate
+    raise ValueError(f"unknown git ref: {ref}")
+
+
 def load_pr(base: str, head: str, repo: str = ".") -> PRContext:
     """Builds the PR context from git, diffing head against its merge base with base."""
+    base, head = resolve_ref(base, repo), resolve_ref(head, repo)
     merge_base = _git(repo, "merge-base", base, head).strip()
     statuses = {}
     for row in _git(repo, "diff", "--name-status", "--no-renames", merge_base, head).splitlines():
