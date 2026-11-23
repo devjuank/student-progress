@@ -90,7 +90,7 @@
   issues:
     - id: GT-08
       severity: S2
-      rule: "2"
+      rule: "6"
       file: app/streaks.py
       line: 10
       description: "Off-by-one: the loop starts at yesterday (today - 1 day), so today's activity is never counted. A student active today and yesterday gets a streak of 1 instead of 2; active only today gets 0. Contradicts the docstring ('ending today')."
@@ -145,7 +145,7 @@
 
     - id: GT-13
       severity: S2
-      rule: "2"
+      rule: "6"
       file: app/main.py
       line: 38
       description: "When there are no lessons, percentage changes from 0 to 100: a student is reported as 100% complete with nothing to complete. The new test locks in this behavior."
