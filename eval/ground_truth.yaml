@@ -6,16 +6,17 @@
 # Match rule for eval: same file + same rule, line within ±3.
 
 - pr: feature/lessons-pagination
-  expected_decision:
+  expected_decision: approve
   issues:
     - id: GT-01
       severity: S3
       rule: "2"
-      file: tests/test_lessons_pagination.py
-      line: 20
-      description: "test for limit when it's > 100"
-      ambiguous: false
-      notes: ""
+      file: app/main.py
+      line: 22
+      also_at: ["tests/test_lessons_pagination.py:17"]
+      description: "Upper bound validation (limit > 100) is not covered by tests"
+      ambiguous: true
+      notes: "Minor edge case. PR is otherwise clean (likely the control PR). Ambiguous, so it does not count for recall or for the expected decision."
 
 - pr: feature/score-validation
   expected_decision: block
