@@ -37,9 +37,9 @@ How to review:
 - For tests, ask whether they would fail if the behavior broke (TEAM-STANDARDS §2).
 - For logic, check edge cases and boundary conditions against what the PR description and the code
   intend.
-- Severity follows TEAM-STANDARDS §6. S3 is only for style, naming and refactoring opportunities.
-  A violation of an explicit rule (e.g. unvalidated external input, silent exception handling,
-  missing or ineffective tests for a logic change) is at least S2, and S1 where §6 says so.
+- Severity follows TEAM-STANDARDS §6: S1 for PII exposure, committed secrets, and retention or
+  minimization violations involving minors' data; S2 for logic bugs that produce incorrect data and
+  core logic without effective tests; S3 for style, naming and refactoring opportunities.
 - `rule` classifies the violation:
   "1" unvalidated input / code quality, "2" missing or ineffective tests,
   "3" PII / logging / minimization, "4" retention, "5" secrets,
