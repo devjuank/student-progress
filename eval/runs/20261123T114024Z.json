@@ -1,0 +1,821 @@
+{
+ "runs": 1,
+ "precision": {
+  "mean": 0.769,
+  "min": 0.769,
+  "max": 0.769
+ },
+ "recall": {
+  "mean": 1.0,
+  "min": 1.0,
+  "max": 1.0
+ },
+ "gate_decision_accuracy": {
+  "mean": 1.0,
+  "min": 1.0,
+  "max": 1.0
+ },
+ "standards_decision_accuracy": {
+  "mean": 1.0,
+  "min": 1.0,
+  "max": 1.0
+ },
+ "cost_usd_per_pr": {
+  "mean": 0.0344,
+  "min": 0.0259,
+  "max": 0.0445
+ },
+ "latency_s_per_pr": {
+  "mean": 8.6275,
+  "min": 4.9477,
+  "max": 12.0694
+ },
+ "llm_errors": 0,
+ "decision_stability": {
+  "feature/lessons-pagination": {
+   "approve": 1
+  },
+  "feature/score-validation": {
+   "review": 1
+  },
+  "fix/mobile-sync-visibility": {
+   "block": 1
+  },
+  "feature/support-context": {
+   "block": 1
+  },
+  "feature/email-reminders": {
+   "block": 1
+  },
+  "feature/streaks": {
+   "review": 1
+  },
+  "feature/analytics-archive": {
+   "block": 1
+  },
+  "fix/progress-percentage": {
+   "review": 1
+  }
+ },
+ "per_run": [
+  {
+   "results": {
+    "feature/lessons-pagination": {
+     "head": "feature/lessons-pagination",
+     "decision": "approve",
+     "standards_decision": "approve",
+     "findings": [],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 4804,
+      "output_tokens": 413,
+      "cost_usd": 0.027476,
+      "latency_s": 6.516098833002616,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 0,
+      "stats": {},
+      "llm_findings": 0
+     },
+     "llm_error": null
+    },
+    "feature/score-validation": {
+     "head": "feature/score-validation",
+     "decision": "review",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S2",
+       "rule": "1",
+       "file": "app/main.py",
+       "line": 52,
+       "explanation": "The score is converted with int() before any type check. A non-numeric string (e.g. \"abc\") or null raises ValueError/TypeError, so the client gets an unhandled 500 instead of a 422. Floats are silently truncated (e.g. 100.9 becomes 100), so out-of-range or fractional values are accepted and stored as a different score. The new validation does not fully cover external input, and the tests do not exercise non-integer scores.",
+       "suggested_fix": "Check the type before the range check, e.g. `raw = payload.get(\"score\", 0); if not isinstance(raw, int) or isinstance(raw, bool): raise HTTPException(422, \"score must be an integer\")`, then apply the 0\u2013100 check. Better still, use a Pydantic request model with `score: conint(ge=0, le=100)`. Add tests for string, null and float scores.",
+       "source": "llm",
+       "confidence": 0.55,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 5081,
+      "output_tokens": 913,
+      "cost_usd": 0.038584,
+      "latency_s": 9.250011416999769,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 0,
+      "stats": {},
+      "llm_findings": 1
+     },
+     "llm_error": null
+    },
+    "fix/mobile-sync-visibility": {
+     "head": "fix/mobile-sync-visibility",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/main.py",
+       "line": 57,
+       "explanation": "A PII field is passed to a log call without redaction.",
+       "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 4223,
+      "output_tokens": 448,
+      "cost_usd": 0.025852,
+      "latency_s": 4.947725624999293,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 1,
+      "stats": {},
+      "llm_findings": 1
+     },
+     "llm_error": null
+    },
+    "feature/support-context": {
+     "head": "feature/support-context",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/main.py",
+       "line": 37,
+       "explanation": "Every progress lookup logs the output of build_support_context(). That output contains the student's full_name and email (combined under the non-PII key 'student') and the birthdate. Seeded students s-001 and s-002 have is_minor=True, so pii-minor reaches the logs. redact() is not applied. Even if it were, the 'student' key is not in PII_FIELDS, so name and email would still pass through.",
+       "suggested_fix": "Log only non-identifying fields, e.g. logger.info(\"progress lookup %s\", {\"student_id\": student.id, \"records\": len(records)}), or pass a dict of non-PII fields through redact(). Never interpolate name, email or birthdate into the log.",
+       "source": "llm",
+       "confidence": 0.97,
+       "candidate": false
+      },
+      {
+       "severity": "S1",
+       "rule": "4",
+       "file": "app/support.py",
+       "line": 5,
+       "explanation": "The PR creates a secondary copy of personal data, including minors' data, in application logs for support use. No retention category is declared in app.privacy.RETENTION_DAYS, and nothing enforces the 90-day maximum for minors' data.",
+       "suggested_fix": "Remove PII from the support context. If a persisted support dataset is needed, declare a category (e.g. 'support_context' / 'support_context_minor': 90) in RETENTION_DAYS and enforce it.",
+       "source": "llm",
+       "confidence": 0.75,
+       "candidate": false
+      },
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/support.py",
+       "line": 6,
+       "explanation": "The helper copies name, email and birthdate for support tooling. It does this for every student, including minors, without data minimization or a documented legal basis. It also packs name and email into a free-form string under the key 'student', which redact() cannot mask.",
+       "suggested_fix": "Reduce the context to student.id, country and the records count. Support can resolve identity through access-controlled systems. If minors' identifiers are truly required, document the legal basis in the PR and exclude birthdate.",
+       "source": "llm",
+       "confidence": 0.85,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/support.py",
+       "line": 4,
+       "explanation": "The new helper and the new log call in get_progress have no tests. No test would fail if PII started appearing in the lookup log, or if the context content changed.",
+       "suggested_fix": "Add tests for build_support_context and for GET /students/{id}/progress. Use caplog to assert that the log output contains no full_name, email or birthdate, covering both a minor and an adult student.",
+       "source": "llm",
+       "confidence": 0.7,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 4813,
+      "output_tokens": 1261,
+      "cost_usd": 0.044472,
+      "latency_s": 12.069422874999873,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 3,
+      "stats": {},
+      "llm_findings": 4
+     },
+     "llm_error": null
+    },
+    "feature/email-reminders": {
+     "head": "feature/email-reminders",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "5",
+       "file": "app/notifications.py",
+       "line": 7,
+       "explanation": "A hardcoded credential is committed in this line. A committed secret is a security incident regardless of environment.",
+       "suggested_fix": "Read it from an environment variable, remove it from history and rotate the credential.",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      },
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/notifications.py",
+       "line": 13,
+       "explanation": "A PII field is passed to a log call without redaction.",
+       "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+       "source": "deterministic",
+       "confidence": null,
+       "candidate": false
+      },
+      {
+       "severity": "S3",
+       "rule": "1",
+       "file": "app/notifications.py",
+       "line": 6,
+       "explanation": "The TODO comment has no ticket reference, which \u00a71 does not allow.",
+       "suggested_fix": "Add the tracking ticket to the comment (e.g. `# TODO(LMS-1234): ...`), or remove the comment once the key is moved to environment configuration.",
+       "source": "llm",
+       "confidence": 0.9,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 3179,
+      "output_tokens": 826,
+      "cost_usd": 0.029235999999999998,
+      "latency_s": 7.791692791997775,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 1,
+      "stats": {},
+      "llm_findings": 3
+     },
+     "llm_error": null
+    },
+    "feature/streaks": {
+     "head": "feature/streaks",
+     "decision": "review",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S2",
+       "rule": "6",
+       "file": "app/streaks.py",
+       "line": 10,
+       "explanation": "The docstring says the streak ends today, but the loop starts at today - 1 day. Activity on the current day is never counted. Activity only today returns 0, and activity today plus yesterday returns 1 instead of 2. This produces incorrect streak values for gamification.",
+       "suggested_fix": "Start the loop at the current day: `day = today`. If the intent is to keep a streak alive when the user has not yet been active today, start at today when `today in days` and otherwise at today - 1 day, and document that rule.",
+       "source": "llm",
+       "confidence": 0.85,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "tests/test_streaks.py",
+       "line": 6,
+       "explanation": "The tests only check the return type and `>= 0`, so they would pass for any non-negative integer and cannot detect a regression. No test asserts an exact streak value for consecutive days, a gap, activity on the current day, or duplicates. The current off-by-one bug goes undetected.",
+       "suggested_fix": "Replace these with exact-value tests using a fixed `today`: activity on today and the two previous days gives 3; a gap gives the count up to the gap; no activity gives 0; duplicate dates do not inflate the count; activity only today gives 1 (or whatever rule is decided).",
+       "source": "llm",
+       "confidence": 0.9,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 3398,
+      "output_tokens": 661,
+      "cost_usd": 0.026812000000000002,
+      "latency_s": 6.329487499999232,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 0,
+      "stats": {},
+      "llm_findings": 2
+     },
+     "llm_error": null
+    },
+    "feature/analytics-archive": {
+     "head": "feature/analytics-archive",
+     "decision": "block",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S1",
+       "rule": "4",
+       "file": "app/archive.py",
+       "line": 8,
+       "explanation": "The new ARCHIVE dataset declares no retention category in app.privacy.RETENTION_DAYS, and the module states it is kept indefinitely. It contains minors' data, which must be retained for at most 90 days absent a documented legal basis.",
+       "suggested_fix": "Add a retention category for the archive to RETENTION_DAYS, using at most 90 days for minors' records (e.g. progress_minor). Enforce expiry, and remove the 'kept indefinitely' design or document a legal basis.",
+       "source": "llm",
+       "confidence": 0.92,
+       "candidate": false
+      },
+      {
+       "severity": "S1",
+       "rule": "3",
+       "file": "app/archive.py",
+       "line": 15,
+       "explanation": "archive_progress copies full_name and birthdate into an analytics dataset for every student, including minors (is_minor=True). This is pii-minor leaving the core purpose for analytics without minimization or a documented legal basis. Cohort slicing does not need names or exact birthdates.",
+       "suggested_fix": "Drop full_name and birthdate from the archived record. Keep student_id (or a pseudonymous id) plus coarse attributes such as an age band or is_minor and country. Exclude minors entirely unless a legal basis is documented in the PR.",
+       "source": "llm",
+       "confidence": 0.93,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "app/archive.py",
+       "line": 11,
+       "explanation": "New archiving logic, wired into record_progress, ships without any tests. No test would fail if the archived fields, the minimization, or the call from the endpoint broke.",
+       "suggested_fix": "Add tests asserting that posting progress creates an archive entry with only the minimized fields (no full_name or birthdate), and that minors' records follow the retention and exclusion policy.",
+       "source": "llm",
+       "confidence": 0.8,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 5006,
+      "output_tokens": 977,
+      "cost_usd": 0.039564,
+      "latency_s": 10.541341625001223,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 3,
+      "stats": {},
+      "llm_findings": 3
+     },
+     "llm_error": null
+    },
+    "fix/progress-percentage": {
+     "head": "fix/progress-percentage",
+     "decision": "review",
+     "standards_decision": "block",
+     "findings": [
+      {
+       "severity": "S2",
+       "rule": "6",
+       "file": "app/main.py",
+       "line": 38,
+       "explanation": "When there are no lessons (total == 0), the fallback now returns 100 instead of 0. This reports a student as fully complete even though there was nothing to complete. It also produces contradictory responses: the new test's student returns completed=3, total=0, percentage=100. The PR does not say why 100% is correct here, so this looks like incorrect progress data rather than a deliberate rule.",
+       "suggested_fix": "Keep the zero-lessons fallback at 0, or return null/None to mean 'not applicable'. If 100 really matches the backend, state that in the PR description and code comment and point to the backend contract.",
+       "source": "llm",
+       "confidence": 0.55,
+       "candidate": false
+      },
+      {
+       "severity": "S2",
+       "rule": "2",
+       "file": "tests/test_progress.py",
+       "line": 22,
+       "explanation": "The core change in this PR is switching from round() to int() (truncation), but no test can tell the two apart. The only percentage test uses 3/5 = 60 exactly, which gives the same result either way. Reverting to round() would still pass every test, so the 'unified calculation' this PR claims to fix has no regression coverage.",
+       "suggested_fix": "Add a test with a non-integer ratio that differs between the two, e.g. 2 of 3 lessons (truncation gives 66, rounding gives 67), or patch LESSONS so 3 of 4 completed still differs. Assert the exact value the backend produces.",
+       "source": "llm",
+       "confidence": 0.7,
+       "candidate": false
+      }
+     ],
+     "llm": {
+      "model": "anthropic/claude-opus-5-5",
+      "prompt_version": "d96f0f266eb7",
+      "input_tokens": 4834,
+      "output_tokens": 1190,
+      "cost_usd": 0.043136,
+      "latency_s": 11.57445879199804,
+      "attempts": 1,
+      "dropped_findings": 0,
+      "truncated_context": false,
+      "candidates_sent": 0,
+      "stats": {},
+      "llm_findings": 2
+     },
+     "llm_error": null
+    }
+   },
+   "scored": {
+    "feature/lessons-pagination": {
+     "outcomes": [],
+     "matched": [],
+     "missed": [
+      "GT-01"
+     ]
+    },
+    "feature/score-validation": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "1",
+        "file": "app/main.py",
+        "line": 52,
+        "explanation": "The score is converted with int() before any type check. A non-numeric string (e.g. \"abc\") or null raises ValueError/TypeError, so the client gets an unhandled 500 instead of a 422. Floats are silently truncated (e.g. 100.9 becomes 100), so out-of-range or fractional values are accepted and stored as a different score. The new validation does not fully cover external input, and the tests do not exercise non-integer scores.",
+        "suggested_fix": "Check the type before the range check, e.g. `raw = payload.get(\"score\", 0); if not isinstance(raw, int) or isinstance(raw, bool): raise HTTPException(422, \"score must be an integer\")`, then apply the 0\u2013100 check. Better still, use a Pydantic request model with `score: conint(ge=0, le=100)`. Add tests for string, null and float scores.",
+        "source": "llm",
+        "confidence": 0.55,
+        "candidate": false
+       },
+       "issue": "GT-02",
+       "ambiguous": true,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-02"
+     ],
+     "missed": []
+    },
+    "fix/mobile-sync-visibility": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/main.py",
+        "line": 57,
+        "explanation": "A PII field is passed to a log call without redaction.",
+        "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-03",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-03"
+     ],
+     "missed": []
+    },
+    "feature/support-context": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/main.py",
+        "line": 37,
+        "explanation": "Every progress lookup logs the output of build_support_context(). That output contains the student's full_name and email (combined under the non-PII key 'student') and the birthdate. Seeded students s-001 and s-002 have is_minor=True, so pii-minor reaches the logs. redact() is not applied. Even if it were, the 'student' key is not in PII_FIELDS, so name and email would still pass through.",
+        "suggested_fix": "Log only non-identifying fields, e.g. logger.info(\"progress lookup %s\", {\"student_id\": student.id, \"records\": len(records)}), or pass a dict of non-PII fields through redact(). Never interpolate name, email or birthdate into the log.",
+        "source": "llm",
+        "confidence": 0.97,
+        "candidate": false
+       },
+       "issue": "GT-04",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "4",
+        "file": "app/support.py",
+        "line": 5,
+        "explanation": "The PR creates a secondary copy of personal data, including minors' data, in application logs for support use. No retention category is declared in app.privacy.RETENTION_DAYS, and nothing enforces the 90-day maximum for minors' data.",
+        "suggested_fix": "Remove PII from the support context. If a persisted support dataset is needed, declare a category (e.g. 'support_context' / 'support_context_minor': 90) in RETENTION_DAYS and enforce it.",
+        "source": "llm",
+        "confidence": 0.75,
+        "candidate": false
+       },
+       "issue": null
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/support.py",
+        "line": 6,
+        "explanation": "The helper copies name, email and birthdate for support tooling. It does this for every student, including minors, without data minimization or a documented legal basis. It also packs name and email into a free-form string under the key 'student', which redact() cannot mask.",
+        "suggested_fix": "Reduce the context to student.id, country and the records count. Support can resolve identity through access-controlled systems. If minors' identifiers are truly required, document the legal basis in the PR and exclude birthdate.",
+        "source": "llm",
+        "confidence": 0.85,
+        "candidate": false
+       },
+       "issue": "GT-04",
+       "duplicate": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/support.py",
+        "line": 4,
+        "explanation": "The new helper and the new log call in get_progress have no tests. No test would fail if PII started appearing in the lookup log, or if the context content changed.",
+        "suggested_fix": "Add tests for build_support_context and for GET /students/{id}/progress. Use caplog to assert that the log output contains no full_name, email or birthdate, covering both a minor and an adult student.",
+        "source": "llm",
+        "confidence": 0.7,
+        "candidate": false
+       },
+       "issue": null
+      }
+     ],
+     "matched": [
+      "GT-04"
+     ],
+     "missed": []
+    },
+    "feature/email-reminders": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "5",
+        "file": "app/notifications.py",
+        "line": 7,
+        "explanation": "A hardcoded credential is committed in this line. A committed secret is a security incident regardless of environment.",
+        "suggested_fix": "Read it from an environment variable, remove it from history and rotate the credential.",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-05",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/notifications.py",
+        "line": 13,
+        "explanation": "A PII field is passed to a log call without redaction.",
+        "suggested_fix": "Log a non-personal identifier (e.g. student id) or wrap the payload in app.privacy.redact().",
+        "source": "deterministic",
+        "confidence": null,
+        "candidate": false
+       },
+       "issue": "GT-06",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S3",
+        "rule": "1",
+        "file": "app/notifications.py",
+        "line": 6,
+        "explanation": "The TODO comment has no ticket reference, which \u00a71 does not allow.",
+        "suggested_fix": "Add the tracking ticket to the comment (e.g. `# TODO(LMS-1234): ...`), or remove the comment once the key is moved to environment configuration.",
+        "source": "llm",
+        "confidence": 0.9,
+        "candidate": false
+       },
+       "issue": "GT-07",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-05",
+      "GT-06",
+      "GT-07"
+     ],
+     "missed": []
+    },
+    "feature/streaks": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "6",
+        "file": "app/streaks.py",
+        "line": 10,
+        "explanation": "The docstring says the streak ends today, but the loop starts at today - 1 day. Activity on the current day is never counted. Activity only today returns 0, and activity today plus yesterday returns 1 instead of 2. This produces incorrect streak values for gamification.",
+        "suggested_fix": "Start the loop at the current day: `day = today`. If the intent is to keep a streak alive when the user has not yet been active today, start at today when `today in days` and otherwise at today - 1 day, and document that rule.",
+        "source": "llm",
+        "confidence": 0.85,
+        "candidate": false
+       },
+       "issue": "GT-08",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "tests/test_streaks.py",
+        "line": 6,
+        "explanation": "The tests only check the return type and `>= 0`, so they would pass for any non-negative integer and cannot detect a regression. No test asserts an exact streak value for consecutive days, a gap, activity on the current day, or duplicates. The current off-by-one bug goes undetected.",
+        "suggested_fix": "Replace these with exact-value tests using a fixed `today`: activity on today and the two previous days gives 3; a gap gives the count up to the gap; no activity gives 0; duplicate dates do not inflate the count; activity only today gives 1 (or whatever rule is decided).",
+        "source": "llm",
+        "confidence": 0.9,
+        "candidate": false
+       },
+       "issue": "GT-09",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-08",
+      "GT-09"
+     ],
+     "missed": []
+    },
+    "feature/analytics-archive": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "4",
+        "file": "app/archive.py",
+        "line": 8,
+        "explanation": "The new ARCHIVE dataset declares no retention category in app.privacy.RETENTION_DAYS, and the module states it is kept indefinitely. It contains minors' data, which must be retained for at most 90 days absent a documented legal basis.",
+        "suggested_fix": "Add a retention category for the archive to RETENTION_DAYS, using at most 90 days for minors' records (e.g. progress_minor). Enforce expiry, and remove the 'kept indefinitely' design or document a legal basis.",
+        "source": "llm",
+        "confidence": 0.92,
+        "candidate": false
+       },
+       "issue": "GT-10",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S1",
+        "rule": "3",
+        "file": "app/archive.py",
+        "line": 15,
+        "explanation": "archive_progress copies full_name and birthdate into an analytics dataset for every student, including minors (is_minor=True). This is pii-minor leaving the core purpose for analytics without minimization or a documented legal basis. Cohort slicing does not need names or exact birthdates.",
+        "suggested_fix": "Drop full_name and birthdate from the archived record. Keep student_id (or a pseudonymous id) plus coarse attributes such as an age band or is_minor and country. Exclude minors entirely unless a legal basis is documented in the PR.",
+        "source": "llm",
+        "confidence": 0.93,
+        "candidate": false
+       },
+       "issue": "GT-11",
+       "ambiguous": false,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "app/archive.py",
+        "line": 11,
+        "explanation": "New archiving logic, wired into record_progress, ships without any tests. No test would fail if the archived fields, the minimization, or the call from the endpoint broke.",
+        "suggested_fix": "Add tests asserting that posting progress creates an archive entry with only the minimized fields (no full_name or birthdate), and that minors' records follow the retention and exclusion policy.",
+        "source": "llm",
+        "confidence": 0.8,
+        "candidate": false
+       },
+       "issue": null
+      }
+     ],
+     "matched": [
+      "GT-10",
+      "GT-11"
+     ],
+     "missed": []
+    },
+    "fix/progress-percentage": {
+     "outcomes": [
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "6",
+        "file": "app/main.py",
+        "line": 38,
+        "explanation": "When there are no lessons (total == 0), the fallback now returns 100 instead of 0. This reports a student as fully complete even though there was nothing to complete. It also produces contradictory responses: the new test's student returns completed=3, total=0, percentage=100. The PR does not say why 100% is correct here, so this looks like incorrect progress data rather than a deliberate rule.",
+        "suggested_fix": "Keep the zero-lessons fallback at 0, or return null/None to mean 'not applicable'. If 100 really matches the backend, state that in the PR description and code comment and point to the backend contract.",
+        "source": "llm",
+        "confidence": 0.55,
+        "candidate": false
+       },
+       "issue": "GT-13",
+       "ambiguous": true,
+       "severity_ok": true
+      },
+      {
+       "finding": {
+        "severity": "S2",
+        "rule": "2",
+        "file": "tests/test_progress.py",
+        "line": 22,
+        "explanation": "The core change in this PR is switching from round() to int() (truncation), but no test can tell the two apart. The only percentage test uses 3/5 = 60 exactly, which gives the same result either way. Reverting to round() would still pass every test, so the 'unified calculation' this PR claims to fix has no regression coverage.",
+        "suggested_fix": "Add a test with a non-integer ratio that differs between the two, e.g. 2 of 3 lessons (truncation gives 66, rounding gives 67), or patch LESSONS so 3 of 4 completed still differs. Assert the exact value the backend produces.",
+        "source": "llm",
+        "confidence": 0.7,
+        "candidate": false
+       },
+       "issue": "GT-12",
+       "ambiguous": false,
+       "severity_ok": true
+      }
+     ],
+     "matched": [
+      "GT-12",
+      "GT-13"
+     ],
+     "missed": []
+    }
+   },
+   "metrics": {
+    "strict": {
+     "tp": 10,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.769,
+     "recall": 1.0,
+     "severity_accuracy": 1.0,
+     "per_severity": {
+      "S1": {
+       "precision": 0.857,
+       "recall": 1.0,
+       "tp": 6,
+       "fp": 1
+      },
+      "S2": {
+       "precision": 0.6,
+       "recall": 1.0,
+       "fp": 2,
+       "tp": 3
+      },
+      "S3": {
+       "precision": 1.0,
+       "recall": 1.0,
+       "tp": 1
+      }
+     },
+     "per_source": {
+      "deterministic": {
+       "precision": 1.0,
+       "tp": 3
+      },
+      "llm": {
+       "precision": 0.7,
+       "tp": 7,
+       "fp": 3
+      }
+     }
+    },
+    "inclusive": {
+     "tp": 12,
+     "fp": 3,
+     "fn": 1,
+     "precision": 0.8,
+     "recall": 0.923,
+     "severity_accuracy": 1.0,
+     "per_severity": {
+      "S1": {
+       "precision": 0.857,
+       "recall": 1.0,
+       "tp": 6,
+       "fp": 1
+      },
+      "S2": {
+       "precision": 0.714,
+       "recall": 1.0,
+       "tp": 5,
+       "fp": 2
+      },
+      "S3": {
+       "precision": 1.0,
+       "recall": 0.5,
+       "fn": 1,
+       "tp": 1
+      }
+     },
+     "per_source": {
+      "deterministic": {
+       "precision": 1.0,
+       "tp": 3
+      },
+      "llm": {
+       "precision": 0.75,
+       "tp": 9,
+       "fp": 3
+      }
+     }
+    }
+   },
+   "decisions": {
+    "scored_prs": 8,
+    "missing_expected_decision": [],
+    "standards": 1.0,
+    "gate_stopped": 1.0
+   }
+  }
+ ]
+}
