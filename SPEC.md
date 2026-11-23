@@ -67,8 +67,9 @@ The model receives, in this order:
    known limits of `redact()`: it masks only top-level keys with exact names (`full_name`,
    `email`, `birthdate`); it does not inspect values (`{"contact": student.email}` leaks); it
    only accepts dicts; it returns a copy, so logging the original object still leaks.
-3. The PR diff, plus the full head content of touched files and of helpers called from added
-   lines (capped at a token budget; truncation is recorded in telemetry).
+3. The PR description, the PR diff, plus the full head content (with line numbers) of touched files
+   and of the `app` modules they import, where called helpers live (capped at a character budget;
+   truncation is recorded in telemetry).
 4. Deterministic candidates to confirm or discard.
 5. The output JSON schema (§2).
 6. Instruction: report only violations of explicit rules in TEAM-STANDARDS; do not report
@@ -85,7 +86,7 @@ code; eval matching tolerates a human and a model choosing different lines for t
 
 | Condition                                                        | Decision |
 |------------------------------------------------------------------|----------|
-| Any deterministic S1 or S2                                       | **block** |
+| Any deterministic S1 or S2 (not a candidate)                     | **block** |
 | Any LLM S1 with `confidence ≥ 0.8`                               | **block** |
 | Any other LLM S1/S2                                              | **review** (comment + request human review; check status red/pending) |
 | Only S3 findings                                                 | **comment** |
@@ -96,8 +97,9 @@ point to be validated in the eval. Agreement across repeated runs is a better si
 
 Rationale: TEAM-STANDARDS says S1/S2 block merges, but that rule is for humans. The bot only
 auto-blocks categories whose precision is measured as high and stable (see `EVAL.md`).
-If the LLM call fails after retries, the gate does not approve: it reports deterministic findings
-and asks for human review.
+If the LLM call fails after retries, the gate does not approve: it reports deterministic findings,
+including unconfirmed candidates, and asks for human review (`review`). The same applies to
+deterministic-only runs (`--no-llm`).
 
 ## 7. Evaluation unit
 

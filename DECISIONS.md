@@ -41,3 +41,20 @@ and asks for a human. Thresholds are revisited with eval metrics (`EVAL.md`).
 eval shows the reviewer is precise enough for that category. The confidence threshold relies on
 self-reported confidence, which is poorly calibrated; agreement across N runs is the planned
 replacement if eval shows unstable precision.
+
+## ADR-004 — Consistency without temperature: JSON in the prompt, validated with retries
+
+**Context.** The plan asked for a low temperature to get stable reviews. Current Claude models reject
+`temperature` (HTTP 400), and LiteLLM's `response_format` / `reasoning_effort` may be translated into
+request shapes these models also reject (forced tool choice, fixed thinking budgets).
+
+**Decision.** Send no sampling or effort parameters. Ask for a JSON object in the prompt, validate
+each finding against the schema (SPEC §2), drop invalid ones (counted) and retry up to 3 times when
+the envelope is invalid. Stability is measured, not assumed: repeated eval runs (Plan B).
+
+**Alternatives.** Anthropic SDK with native structured outputs (schema guaranteed by the API, but
+ties the code to one provider, against ADR-002); an older model that still accepts `temperature`
+(worse reviewer to satisfy a parameter).
+
+**Consequences.** Some variance between runs is expected and must show up in the eval. The model's
+default effort applies; tuning it is a candidate improvement if the eval shows the need.
