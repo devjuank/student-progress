@@ -132,8 +132,26 @@ as precise when it matches a ground-truth issue, ambiguous ones included):
 
 - **Small set, same set for tuning and testing.** 8 PRs and 13 issues; a difference of one PR is
   within run-to-run variance. Prompt changes after the first iteration were chosen by principle, not
-  by score (ADR-006). Generalization is measured on new PRs the reviewer was never tuned on (step 9).
+  by score (ADR-006). Generalization is measured on new PRs the reviewer was never tuned on (§6).
 - **Exact rule matching** penalizes issues that fit two categories (see §3).
 - **Self-reported confidence** drives the S1 threshold; agreement across repeated runs is the better
   signal if this set grows.
 - **Single model.** Comparing a cheaper model is pending (Plan B).
+
+## 6. Rehearsal on an unseen PR
+
+PR #9 (`rehearsal/leaderboard`, a public `GET /leaderboard`) was written after the final prompt was
+fixed, with issue types the golden set does not contain: PII exposed in an HTTP response (not a log
+or copy) and silent exception handling. Its expected findings (`eval/rehearsal/expected.yaml`) were
+committed before the reviewer ran. Caveat: the PR and its expected answer were written by Claude
+Code, not by the author, so the test is blind for the reviewer but not for whoever wrote the PR.
+
+| Expected | Reviewer (CI, `pull_request` event) |
+|----------|-------------------------------------|
+| R-01 · S1 · §3 · full names of minors returned by a public endpoint (`main.py:74`) | ✅ S1 §3 `main.py:74`, confidence 0.90 |
+| R-02 · S2 · §1 · `except Exception: continue` (`main.py:71`), ambiguous S2/S3 | ✅ found, rated **S3** §1 `main.py:71` |
+| Decision: block | ✅ `block` — the check is red on the PR |
+
+No false positives, no deterministic findings (the leak is not in a log, so it is the LLM's call),
+cost $0.043, latency 11.9 s. The S3 rating of R-02 is the same pattern as GT-02: correct detection,
+severity on the S2/S3 boundary.
