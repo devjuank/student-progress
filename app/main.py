@@ -56,3 +56,24 @@ def record_progress(student_id: str, payload: dict):
     store.PROGRESS.append(record)
     logger.info("progress recorded %s", redact({"student_id": student.id, "lesson_id": record.lesson_id}))
     return {"ok": True}
+
+
+@app.get("/leaderboard")
+def leaderboard(limit: int = 10):
+    """Top students by average score, for the weekly ranking shown in the app."""
+    if limit < 1 or limit > 50:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 50")
+    rows = []
+    for student in store.STUDENTS.values():
+        scores = [r.score for r in store.PROGRESS if r.student_id == student.id]
+        try:
+            average = sum(scores) / len(scores)
+        except Exception:
+            continue
+        rows.append({
+            "name": student.full_name,
+            "country": student.country,
+            "average_score": round(average, 1),
+        })
+    rows.sort(key=lambda row: row["average_score"], reverse=True)
+    return rows[:limit]
